@@ -25,26 +25,26 @@ For a detailed list of wikitext behavior and respective markup please [see here]
 * Partial: Some basic behaviors will be implemented, but further advanced behaviors may be dropped in favor of a simpler solution.
 * No plan: Will not be considered in final product, either (1) there is no 1-to-1 HTML solution to that format or (2) such a behavior depends on TW5 internals to work.
 
-|Wikitext Component|Plans|
-|------------------|-----|
-|Block Quotes|FULL|
-|Code Blocks|FULL|
+|Wikitext Component|Plans|Issue|
+|------------------|-----|---|
+|Block Quotes|FULL|#2|
+|Code Blocks|FULL|#3|
 |Dashes|No plan|
-|Definitions|FULL|
-|Formatting|FULL|
+|Definitions|FULL|#4|
+|Formatting|FULL|#1|
 |HTML|No plan|
 |Hard Linebreaks|No plan|
-|Headings|FULL|
-|Horizontal Rules|FULL|
-|Images|FULL|
-|Linking|Partial|
-|Lists|Partial|
+|Headings|FULL|#5|
+|Horizontal Rules|FULL|#6|
+|Images|FULL|#7|
+|Linking|Partial|#8|
+|Lists|Partial|#9|
 |Macro Calls|No plan|
 |Macro Definitions|No plan|
 |Macros|No plan|
 |Paragraphs|No plan|
 |Styles and Classes|No plan|
-|Tables|Partial|
+|Tables|Partial|#10|
 |Transclusion|No plan|
 |Typed Blocks|No plan|
 |Variables|No plan|
