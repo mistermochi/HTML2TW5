@@ -1,6 +1,6 @@
-# HTML2TW5
+# [HTML2TW5](https://mistermochi.github.io/HTML2TW5/)
 
-This is a very proof-of-concept prototype of a tool to convert HTML text to tw5 wikitext.
+This is a very proof-of-concept prototype of a tool to convert HTML text to tw5 wikitext. [Jump right into the latest release.](https://mistermochi.github.io/HTML2TW5/)
 
 It aims at bridging the gap between "real world" documents in the form of online articles/ MS word documents and Tiddlywiki, making it easier for other platform users to get a head start with tiddlywiki. It also aims to greatly reduce the effort required to edit certain formatting components, e.g. merged tables, resized images... in a more user friendly, WYSIWYG manner.
 
