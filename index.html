@@ -310,22 +310,42 @@
 	    }
 	  };
 
-		rules.table = {		
-	 	 	rowspan: [],	// to record merged COLUMNs across td/th declarations
+		rules.table = {
 	    filter: 'table',
 			replacement: function (content, node, options) {
-				this.rowspan = [];	// reset rowspan after each table processing
-				return content;
+				rules.tdth.rowspan = [];	// reset rowspan after each table processing
+				rules.tdth.currentx, rules.tdth.currenty = 0;
+        
+        // *** Table class ***
+        var tClass = cleanAttribute(node.getAttribute('class'));
+        if (tClass) tClass = '|' + tClass + "|k\n";
+        
+	      content = content
+        .replace(/\n+/g, '\n'); // simplify duplicated newlines
+        
+				return '\n\n' + tClass + content + '\n\n';
 			}
 		};
 
 	  rules.tr = {
-	    filter: 'tr',
+	    filter: ['tr', 'tbody', 'thead', 'tfoot', 'caption'],
 
 	    replacement: function (content, node, options) {
+        
 	      content = content
 	        .replace(/^\n+/, '') // remove leading newlines
 	        .replace(/\n+$/, '\n') // replace trailing newlines with just a single one
+        
+        // *** row format trailer ***
+        switch (node.nodeName){
+        case 'THEAD' : 
+          content += 'h'; break;
+        case 'TFOOT' :
+          content += 'f'; break;
+        case 'CAPTION' :
+          content = '|' + content + '|c'; break;
+        }
+        
 	      return (
 	        content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '')
 	      )
@@ -333,53 +353,90 @@
 	  };
 	
 	  rules.tdth = {
+
+	 	 	rowspan: [],	// to record merged COLUMNs across td/th declarations
+	 	 	currentx: 0,
+      currenty: 0,
 	    filter: ['td','th'],
 		
 	    replacement: function (content, node, options) {
-				var rowspanRules = rules.table.rowspan;
-				console.log(rowspanRules);
+        
 	      content = content
 	        .replace(/^\n+/, '') // remove leading newlines
 	        .replace(/\n+$/, '') // replace trailing newlines
-				content = content.replace(/(?:\r\n|\r|\n)/g, '<br>');
-			
-				var child = node;
-				var colIndex = 0;
-				while( (child = child.previousSibling) != null ) colIndex++;
-
-	      var rowspan = Number(cleanAttribute(node.getAttribute('rowspan')));
-	      var colspan = Number(cleanAttribute(node.getAttribute('colspan')));
-			
-				content = content + repeat('|<', colspan-1) // expand colspan to merge cells horizontally
-			
-				if (rowspanRules[colIndex] > 0 ){
-					var i = colIndex;
-					do {
-						content = "~|" + content;				
-						rowspanRules[i] -= 1;	// already satisfied once 
-						i++;
-					} while (rowspanRules[i] > 0);
-				}
-			
-				if (rowspan > 0){
-					rowspanRules[colIndex] = rowspan-1;
-				}	
-
+          .replace(/^,/, '&#44;') // replace first , characters
+          .replace(/^\^/, '&#94;') // replace first ^ characters       
+        
+				content = content.replace(/(?:\r\n|\r|\n)/g, '<br/>');
+        
+        // *** format TH field with ! ***
 				if (node.nodeName === 'TH') content = "!" + content;
-				
+        
+        // *** Horizontal Alignment ***
+        var align = cleanAttribute(node.getAttribute('align')).toLowerCase();
+        switch (align){
+          case 'left': 
+            content = content + ' ';
+            break;
+          case 'right':
+            content = ' ' + content;
+            break;
+          case 'center':
+            content = ' ' + content + ' ';
+            break;
+        }
+        
+        // *** Vertical Alignment ***
+        var vAlign = cleanAttribute(node.getAttribute('valign')).toLowerCase();
+        switch (vAlign){
+          case 'top':
+            content = '^' + content;
+            break;
+          case 'bottom':
+            content = ',' + content;
+            break;
+        }
+        
+				var child = node;	
+
+        // *** Horizontal merged cells ***
+	      var colspan = Number(cleanAttribute(node.getAttribute('colspan')));		
+				if (colspan > 0){
+          colspan --;
+				  content = content + repeat('|<', colspan) // expand colspan to merge cells horizontally
+				}
+        
+        //*** Vertical merged cells ***
+	      var rowspan = Number(cleanAttribute(node.getAttribute('rowspan')));
+        if (rowspan > 0){
+          rowspan --;
+        }
+        while (this.rowspan[this.currentx] > 0){
+          content = '~|' + content;
+          this.rowspan[this.currentx] --;
+          this.currentx ++;
+        }
+        
+        for (var i = 0; i <= colspan; i++){
+          this.rowspan[this.currentx+i] = rowspan;
+        }
+        this.currentx += colspan;
+        
 	      var parent = node.parentNode;
 	      if (parent.nodeName === 'TR' && parent.lastElementChild === node) {
-					var residualMergeCells = rowspanRules.length - colIndex - 1;
-					if (residualMergeCells > 0){
-						for (var i=colIndex+1; i<rowspanRules.length; i++){
-							if (rowspanRules[i] > 0){
-								content = content + "|~";
-								rowspanRules[i] -= 1;	// already satisfied once 
-							}
-						}
-					}
+          while (this.rowspan.length > this.currentx+1){
+            content = content + '|~';
+            this.rowspan[this.currentx+1] --;
+            this.currentx ++;
+          }          
+          // *** edge case where next line is completely empty ***
+          var minRowSpan = Math.min(...this.rowspan)
+          this.rowspan = this.rowspan.map((x) => x-minRowSpan);
+          this.currenty ++;
+          this.currentx = 0;
 	        return '|' + content + '|'
 			  } else {
+          this.currentx += 1;
 	        return '|' + content
 	      }
 	    }
@@ -560,15 +617,19 @@
 	    filter: 'img',
 
 	    replacement: function (content, node) {
-	      var alt = cleanAttribute(node.getAttribute('alt'));
+        
 	      var src = node.getAttribute('src') || '';
 	      var title = cleanAttribute(node.getAttribute('title'));
 	      var width = cleanAttribute(node.getAttribute('width'));
 	      var height = cleanAttribute(node.getAttribute('height'));
-	      var altpart = alt ? alt + '|' : '';
+        var iClass = cleanAttribute(node.getAttribute('class'));
+        
+	      var title = title ? title + '|' : '';
 				var width = width ? " width=" + width : "";
 				var height = height ? " height=" + height : "";
-	      return src ? '[img' + width + height + ' [' + alt + src  + ']]' : ''
+				var iClass = iClass ? " class=\"" + iClass + "\"" : "";
+        
+	      return src ? '[img' + width + height + iClass + ' [' + title + src  + ']]' : ''
 	    }
 	  };
 
