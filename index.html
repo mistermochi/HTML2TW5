@@ -223,15 +223,10 @@
 
 	    replacement: function (content, node, options) {
 	      var hLevel = Number(node.nodeName.charAt(1));
-
-	      if (options.headingStyle === 'setext' && hLevel < 3) {
-	        var underline = repeat((hLevel === 1 ? '=' : '-'), content.length);
-	        return (
-	          '\n\n' + content + '\n' + underline + '\n\n'
-	        )
-	      } else {
-	        return '\n\n' + repeat('!', hLevel) + ' ' + content + '\n\n'
-	      }
+				var hClass = cleanAttribute(node.getAttribute('class'));
+	      if (hClass) hClass = '.' + hClass;
+				
+	      return '\n\n' + repeat('!', hLevel) + hClass + ' ' + content + '\n\n'
 	    }
 	  };
 
@@ -245,6 +240,27 @@
 	    }
 	  };
 
+	  rules.dl = {
+	    filter: ['dl'],
+
+	    replacement: function (content, node) {
+	      return '\n\n' + content + '\n\n';
+	    }
+	  };
+
+	  rules.dtdd = {
+	    filter: ['dt','dd'],
+				
+	    replacement: function (content, node) {
+				console.log(content);
+				content = content.trim().replace(/\n+/g, '\n')
+					.replace(/^/gm, (node.nodeName === 'DT') ? '\n;' : '\n:')
+					.replace(/\n+/g, '\n')
+				console.log(content);
+				return content;
+	    }
+	  };
+		
 	  rules.list = {
 	    filter: ['ul', 'ol'],
 
