@@ -214,7 +214,17 @@
 	    filter: 'br',
 
 	    replacement: function (content, node, options) {
-	      return options.br + '\n'
+	      var parent = node.parentNode;
+        switch (parent.nodeName){
+          case 'TH':
+          case 'TD':
+          case 'LI':
+          case 'DD':
+          case 'DT':
+            return ' <br/> '; // we want to preserve the br tag in these cases to allow multiple lines within HTML tags
+          default: 
+	          return options.br + '\n'
+        }
 	    }
 	  };
 
@@ -282,14 +292,20 @@
 	      if (parent.nodeName === 'OL') {
 	      	var prefix = options.numberListMarker;
 	      }else{
-		    var prefix = options.bulletListMarker;
+		      var prefix = options.bulletListMarker;
 	      }
+				var liClass = cleanAttribute(node.getAttribute('class'));
+	      if (liClass) liClass = '.' + liClass;
+        
 	      content = content
-	        .replace(/^\n+/, '') // remove leading newlines
-	        .replace(/\n+$/, '\n') // replace trailing newlines with just a single one
-	        .replace(/\n/gm, '\n'+prefix); // indent
-	      return (
-	        prefix + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '')
+	        .replace(/\n+/g, '\n') // simplify duplicated newlines
+	        .replace(/\n+$/, '') // remove trailing newlines
+	        .replace(/\n/gm, '\n'+prefix); // prefix identifier with class declaration
+          
+          var padding = (content[0] === '#' || content[0]=== '*') ? '' : ' '; // Add spacing if content is not already a nested list     
+        
+        return (
+	        prefix + liClass + padding + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '')
 	      )
 	    }
 	  };
@@ -433,7 +449,7 @@
 	    }
 	  };
 
-	  rules.inlineLink = {
+	  rules.link = {
 	    filter: function (node, options) {
 	      return (
 	        options.linkStyle === 'inlined' &&
@@ -443,55 +459,19 @@
 	    },
 
 	    replacement: function (content, node) {
-	      var href = node.getAttribute('href');
-	      return '[[' + content + '|' + href + ']]'
-	    }
-	  };
-
-	  rules.referenceLink = {
-	    filter: function (node, options) {
-	      return (
-	        options.linkStyle === 'referenced' &&
-	        node.nodeName === 'A' &&
-	        node.getAttribute('href')
-	      )
-	    },
-
-	    replacement: function (content, node, options) {
-	      var href = node.getAttribute('href');
-	      var title = cleanAttribute(node.getAttribute('title'));
-	      if (title) title = ' "' + title + '"';
-	      var replacement;
-	      var reference;
-
-	      switch (options.linkReferenceStyle) {
-	        case 'collapsed':
-	          replacement = '[' + content + '][]';
-	          reference = '[' + content + ']: ' + href + title;
-	          break
-	        case 'shortcut':
-	          replacement = '[' + content + ']';
-	          reference = '[' + content + ']: ' + href + title;
-	          break
-	        default:
-	          var id = this.references.length + 1;
-	          replacement = '[' + content + '][' + id + ']';
-	          reference = '[' + id + ']: ' + href + title;
-	      }
-
-	      this.references.push(reference);
-	      return replacement
-	    },
-
-	    references: [],
-
-	    append: function (options) {
-	      var references = '';
-	      if (this.references.length) {
-	        references = '\n\n' + this.references.join('\n') + '\n\n';
-	        this.references = []; // Reset references
-	      }
-	      return references
+	      var href = decodeURIComponent(node.getAttribute('href'));
+        var ext = 'ext';
+        if (href[0] === '#'){ // This is an internal link!
+          ext = '';
+          href = href.substring(1);
+        }
+        if (href === content){ // link is identical to text
+          href = '';
+        } else {
+          href = '|' + href;
+        }
+        
+        return '['+ ext + '[' + content + href + ']]';
 	    }
 	  };
 
@@ -568,8 +548,9 @@
 	      if (matches) {
 	        if (/^`/.test(content)) leadingSpace = ' ';
 	        if (/`$/.test(content)) trailingSpace = ' ';
-	        while (matches.indexOf(delimiter) !== -1) delimiter = delimiter + '`';
+	        if (matches.indexOf(delimiter) !== -1) delimiter = delimiter + '`';
 	      }
+        // Tiddlywiki only supports max 2 levels of backticks
 
 	      return delimiter + leadingSpace + content + trailingSpace + delimiter
 	    }
