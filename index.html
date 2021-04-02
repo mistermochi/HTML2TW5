@@ -240,13 +240,66 @@
 	    }
 	  };
 
-	  rules.blockquote = {
-	    filter: 'blockquote',
+	  rules.cite = {
+	    filter: function (node) {
+	      return (
+	        node.nodeName === 'CITE' &&
+	        node.parentNode.nodeName === 'BLOCKQUOTE'
+	      )
+	    },
+
+	    replacement: function () {
+	      return '';  // suppress showing citation in content
+	    }
+	  };
+
+	  rules.inlineBlockquote = {
+	    filter: function (node) {
+        if (node.nodeName !== 'BLOCKQUOTE')
+          return false;
+        if (node.parentNode.nodeName === 'LI')
+          return true;
+        var currentNode = node;
+        /** test if any parent is quote **/
+        while (currentNode.parentNode){
+          currentNode = currentNode.parentNode
+          if (currentNode.nodeName === 'BLOCKQUOTE')
+            return true;
+        }
+        /** test if any child is quote **/
+        function childIsQuote(node){
+          if (node.hasChildNodes())
+            return Array.prototype.some.call(node.childNodes, function (childNode) {
+              if (childNode.nodeName === 'BLOCKQUOTE')
+                return true;
+              else
+                return childIsQuote(childNode);
+            });
+        }
+        return childIsQuote(node);
+	    },
 
 	    replacement: function (content) {
 	      content = content.replace(/^\n+|\n+$/g, '');
 	      content = content.replace(/^/gm, '>');
 	      return '\n\n' + content + '\n\n'
+	    }
+	  };
+    
+	  rules.multilineBlockquote = {
+	    filter: 'blockquote',
+
+	    replacement: function (content, node) {
+	      content = content.replace(/^\n+|\n+$/g, '');
+				var bqClass = cleanAttribute(node.getAttribute('class'));
+	      if (bqClass) bqClass = toClassDeclarations(bqClass);
+        var citation = Array.prototype.find.call(node.childNodes,
+          childNode => childNode.nodeName === 'CITE'
+        )
+        citation = citation ? ' ' + citation.textContent : '';
+	      return '\n<<<' + bqClass + '\n' + 
+          content + 
+        '\n<<<' + citation + '\n';
 	    }
 	  };
 
@@ -454,7 +507,13 @@
 	    replacement: function (content, node, options) {
 	      var className = node.firstChild.getAttribute('class') || '';
 	      var language = (className.match(/language-(\S+)/) || [null, ''])[1];
-	      var code = node.firstChild.textContent;
+	      var code = Array.prototype.map.call(node.childNodes, function (childNode){
+	        if (childNode.nodeName === 'CODE')
+            return childNode.textContent;
+          if (childNode.nodeName === 'BR')
+            return "\n";
+          return "";
+	      }).join("");
 
 	      var fenceChar = options.fence.charAt(0);
 	      var fenceSize = 3;
