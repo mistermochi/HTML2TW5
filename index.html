@@ -234,7 +234,7 @@
 	    replacement: function (content, node, options) {
 	      var hLevel = Number(node.nodeName.charAt(1));
 				var hClass = cleanAttribute(node.getAttribute('class'));
-	      if (hClass) hClass = '.' + hClass;
+	      if (hClass) hClass = toClassDeclarations(hClass);
 				
 	      return '\n\n' + repeat('!', hLevel) + hClass + ' ' + content + '\n\n'
 	    }
@@ -295,7 +295,7 @@
 		      var prefix = options.bulletListMarker;
 	      }
 				var liClass = cleanAttribute(node.getAttribute('class'));
-	      if (liClass) liClass = '.' + liClass;
+	      if (liClass) liClass = toClassDeclarations(liClass);
         
 	      content = content
 	        .replace(/\n+/g, '\n') // simplify duplicated newlines
@@ -441,31 +441,10 @@
 	      }
 	    }
 	  };
-  
-
-	  rules.indentedCodeBlock = {
-	    filter: function (node, options) {
-	      return (
-	        options.codeBlockStyle === 'indented' &&
-	        node.nodeName === 'PRE' &&
-	        node.firstChild &&
-	        node.firstChild.nodeName === 'CODE'
-	      )
-	    },
-
-	    replacement: function (content, node, options) {
-	      return (
-	        '\n\n    ' +
-	        node.firstChild.textContent.replace(/\n/g, '\n    ') +
-	        '\n\n'
-	      )
-	    }
-	  };
 
 	  rules.fencedCodeBlock = {
 	    filter: function (node, options) {
 	      return (
-	        options.codeBlockStyle === 'fenced' &&
 	        node.nodeName === 'PRE' &&
 	        node.firstChild &&
 	        node.firstChild.nodeName === 'CODE'
@@ -1001,6 +980,13 @@
 	    }
 	    return isFlanked
 	  }
+    
+    function toClassDeclarations (classStrings) {
+      return classStrings
+        .split(" ")
+        .map(classString => "."+classString)
+        .join("");
+    }
 
 	  var reduce = Array.prototype.reduce;
 	  var leadingNewLinesRegExp = /^\n*/;
@@ -1025,7 +1011,6 @@
 	      hr: '---',
 	      bulletListMarker: '*',
 	      numberListMarker: '#',
-	      codeBlockStyle: 'indented',
 	      fence: '```',
 	      emDelimiter: '//',
 	      strongDelimiter: '\'\'',
